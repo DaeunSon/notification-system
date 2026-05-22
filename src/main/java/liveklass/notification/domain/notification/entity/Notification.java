@@ -50,6 +50,9 @@ public class Notification {
     @Column(name = "is_read", nullable = false)
     private boolean read;
 
+    @Column(name = "failure_reason", length = 1000)
+    private String failureReason;
+
     /**
      *
      * PENDING 상태의 알림 생성
@@ -70,6 +73,31 @@ public class Notification {
         notification.status = NotificationStatus.PENDING;
         notification.read = false;
         return notification;
+    }
+
+    public void startProcessing() {
+        assertStatus(NotificationStatus.PENDING);
+        this.status = NotificationStatus.PROCESSING;
+    }
+
+    public void markSuccess() {
+        assertStatus(NotificationStatus.PROCESSING);
+        this.status = NotificationStatus.SUCCESS;
+        this.failureReason = null;
+    }
+
+    public void markFailed(String reason) {
+        assertStatus(NotificationStatus.PROCESSING);
+        this.status = NotificationStatus.FAILED;
+        this.failureReason = reason;
+    }
+
+    private void assertStatus(NotificationStatus expected) {
+        if (this.status != expected) {
+            throw new IllegalStateException(
+                    "알림 상태 전이 불가: 현재=" + this.status + ", 기대=" + expected
+            );
+        }
     }
 
 }
