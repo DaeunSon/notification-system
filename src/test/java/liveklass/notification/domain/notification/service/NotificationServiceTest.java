@@ -32,6 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
@@ -131,7 +132,7 @@ class NotificationServiceTest {
         }
 
         @Test
-        @DisplayName("순차적 중복 요청 시 첫 번째는 성공, 두 번째는 예외")
+        @DisplayName("순차적 중복 요청 시 NOTIFICATION_DUPLICATE(409) 발생")
         void fail_sequentialDuplicateRequest() {
             given(notificationRepository.existsByReceiver_IdAndNotificationTypeAndReferenceIdAndChannel(
                     RECEIVER_ID,
@@ -162,6 +163,34 @@ class NotificationServiceTest {
                     createRequest.referenceId(),
                     createRequest.channel()
             );
+        }
+
+        @Test
+        @DisplayName("동시 중복 요청 시 save UK 위반으로 NOTIFICATION_DUPLICATE(409) 발생")
+        void fail_concurrentDuplicateOnSave() {
+            given(notificationRepository.existsByReceiver_IdAndNotificationTypeAndReferenceIdAndChannel(
+                    RECEIVER_ID,
+                    createRequest.notificationType(),
+                    createRequest.referenceId(),
+                    createRequest.channel()
+            )).willReturn(false);
+
+            DataIntegrityViolationException ukViolation = new DataIntegrityViolationException(
+                    "uk violation",
+                    new RuntimeException(
+                            "Duplicate entry for key 'uk_notification_recipient_type_reference_channel'"
+                    )
+            );
+            given(notificationRepository.save(any(Notification.class))).willThrow(ukViolation);
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> notificationService.createRequest(createRequest)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.NOTIFICATION_DUPLICATE);
+            assertThat(exception.getDetail()).contains("수신자 ID: " + RECEIVER_ID);
+            verify(notificationRepository).save(any(Notification.class));
         }
     }
 
