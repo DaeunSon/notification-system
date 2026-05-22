@@ -7,6 +7,7 @@ import liveklass.notification.domain.notification.entity.NotificationType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -24,4 +25,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findByReceiver_IdAndReadOrderByIdDesc(Long receiverId, boolean read);
 
     List<Notification> findByStatusOrderByIdAsc(NotificationStatus status);
+
+    List<Notification> findByStatusAndNextRetryAtBeforeAndRetryCountLessThan(
+        NotificationStatus status,
+        LocalDateTime now,
+        int retryCount);
 }

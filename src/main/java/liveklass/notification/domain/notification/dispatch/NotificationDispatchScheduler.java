@@ -14,7 +14,11 @@ public class NotificationDispatchScheduler {
 
     @Scheduled(fixedDelay = 5000)
     public void pollPendingNotifications() {
-        log.debug("PENDING 알림 폴링 시작");
         notificationDispatchService.dispatchPendingNotifications();
+    }
+
+    @Scheduled(fixedDelay = 5000)
+    public void pollFailedRetryDueNotifications() {
+        notificationDispatchService.dispatchFailedRetryDueNotifications();
     }
 }

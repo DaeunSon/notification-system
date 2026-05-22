@@ -3,41 +3,42 @@ package liveklass.notification.domain.notification.dispatch;
 import liveklass.notification.domain.notification.entity.Notification;
 import liveklass.notification.domain.notification.entity.NotificationStatus;
 import liveklass.notification.domain.notification.repository.NotificationRepository;
-import liveklass.notification.domain.notification.sender.NotificationSender;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 스케줄러용 발송 오케스트레이션. 조회·루프만 담당하고,
+ * 건별 트랜잭션은 {@link NotificationDispatchWorker}에 위임한다.
+ */
 @Service
 @RequiredArgsConstructor
 public class NotificationDispatchService {
 
     private final NotificationRepository notificationRepository;
-    private final NotificationSender notificationSender;
+    private final NotificationDispatchWorker notificationDispatchWorker;
 
     public void dispatchPendingNotifications() {
         List<Notification> pending =
                 notificationRepository.findByStatusOrderByIdAsc(NotificationStatus.PENDING);
 
         for (Notification notification : pending) {
-            dispatch(notification);
+            notificationDispatchWorker.dispatch(notification);
         }
     }
 
-    @Transactional
-    public void dispatch(Notification notification) {
-        notification.startProcessing();
-        notificationRepository.save(notification);
+    public void dispatchFailedRetryDueNotifications() {
+        List<Notification> failedRetryDue =
+                notificationRepository.findByStatusAndNextRetryAtBeforeAndRetryCountLessThan(
+                        NotificationStatus.FAILED,
+                        LocalDateTime.now(),
+                        Notification.MAX_RETRY_COUNT
+                );
 
-        try {
-            notificationSender.send(notification);
-            notification.markSuccess();
-        } catch (Exception e) {
-            notification.markFailed(e.getMessage());
+        for (Notification notification : failedRetryDue) {
+            notificationDispatchWorker.dispatchRetry(notification);
         }
-
-        notificationRepository.save(notification);
     }
 }

@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification {
 
-    private static final int MAX_RETRY_COUNT = 3;
+    public static final int MAX_RETRY_COUNT = 3;
     private static final long RETRY_DELAY_MINUTES = 1;
 
     @Id
