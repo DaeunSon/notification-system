@@ -25,7 +25,12 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
-    
-
-
+    public static User create(String username, String password, String email, UserRole role) {
+        User user = new User();
+        user.username = username;
+        user.password = password;
+        user.email = email;
+        user.role = role;
+        return user;
+    }
 }
