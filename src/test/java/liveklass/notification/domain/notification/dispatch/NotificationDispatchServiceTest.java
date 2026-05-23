@@ -1,18 +1,17 @@
 package liveklass.notification.domain.notification.dispatch;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import liveklass.notification.domain.notification.entity.Notification;
 import liveklass.notification.domain.notification.entity.NotificationChannel;
 import liveklass.notification.domain.notification.entity.NotificationStatus;
 import liveklass.notification.domain.notification.entity.NotificationType;
-import liveklass.notification.domain.notification.repository.NotificationRepository;
 import liveklass.notification.domain.user.entity.User;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -23,9 +22,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
 @ExtendWith(MockitoExtension.class)
 @DisplayName("NotificationDispatchService 테스트")
 class NotificationDispatchServiceTest {
@@ -34,7 +30,7 @@ class NotificationDispatchServiceTest {
     private static final Long RECEIVER_ID = 1L;
 
     @Mock
-    private NotificationRepository notificationRepository;
+    private NotificationDispatchClaimService notificationDispatchClaimService;
 
     @Mock
     private NotificationDispatchWorker notificationDispatchWorker;
@@ -63,15 +59,18 @@ class NotificationDispatchServiceTest {
     class DispatchPending {
 
         @Test
-        @DisplayName("PENDING 목록을 조회해 Worker에 건별 위임한다")
-        void dispatchesAllPending() {
-            given(notificationRepository.findByStatusOrderByIdAsc(NotificationStatus.PENDING))
-                    .willReturn(List.of(pendingNotification));
+        @DisplayName("선점한 PENDING 알림을 processClaimed로 처리한다")
+        void dispatchesClaimedPending() {
+            Notification processing = pendingNotification;
+            processing.startProcessing();
+
+            given(notificationDispatchClaimService.claimNextPending())
+                    .willReturn(Optional.of(processing), Optional.empty());
 
             notificationDispatchService.dispatchPendingNotifications();
 
-            verify(notificationRepository).findByStatusOrderByIdAsc(NotificationStatus.PENDING);
-            verify(notificationDispatchWorker).dispatch(pendingNotification);
+            verify(notificationDispatchClaimService, times(2)).claimNextPending();
+            verify(notificationDispatchWorker).processClaimed(processing);
         }
     }
 
@@ -80,27 +79,21 @@ class NotificationDispatchServiceTest {
     class DispatchFailedRetryDue {
 
         @Test
-        @DisplayName("재시도 가능한 FAILED 목록을 조회해 Worker에 건별 위임한다")
-        void dispatchesAllFailedRetryDue() {
+        @DisplayName("선점한 FAILED 알림을 processClaimed로 처리한다")
+        void dispatchesClaimedFailed() {
             Notification failed = pendingNotification;
             ReflectionTestUtils.setField(failed, "status", NotificationStatus.FAILED);
             ReflectionTestUtils.setField(failed, "retryCount", 1);
-            ReflectionTestUtils.setField(failed, "nextRetryAt", LocalDateTime.now().minusMinutes(1));
+            ReflectionTestUtils.setField(failed, "nextRetryAt", java.time.LocalDateTime.now().minusMinutes(1));
+            failed.startProcessingForRetry();
 
-            given(notificationRepository.findByStatusAndNextRetryAtBeforeAndRetryCountLessThan(
-                    eq(NotificationStatus.FAILED),
-                    any(LocalDateTime.class),
-                    eq(Notification.MAX_RETRY_COUNT)
-            )).willReturn(List.of(failed));
+            given(notificationDispatchClaimService.claimNextFailedRetryDue())
+                    .willReturn(Optional.of(failed), Optional.empty());
 
             notificationDispatchService.dispatchFailedRetryDueNotifications();
 
-            verify(notificationRepository).findByStatusAndNextRetryAtBeforeAndRetryCountLessThan(
-                    eq(NotificationStatus.FAILED),
-                    any(LocalDateTime.class),
-                    eq(Notification.MAX_RETRY_COUNT)
-            );
-            verify(notificationDispatchWorker).dispatchRetry(failed);
+            verify(notificationDispatchClaimService, times(2)).claimNextFailedRetryDue();
+            verify(notificationDispatchWorker).processClaimed(failed);
         }
     }
 }
