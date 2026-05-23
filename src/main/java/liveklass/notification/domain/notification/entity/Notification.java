@@ -21,6 +21,8 @@ import java.time.LocalDateTime;
 public class Notification {
 
     public static final int MAX_RETRY_COUNT = 3;
+    /** PROCESSING 스턱 복구 허용 횟수 (초과 시 DEAD) */
+    public static final int MAX_STUCK_RECOVERY_COUNT = 3;
     private static final long RETRY_DELAY_MINUTES = 1;
 
     @Id
@@ -64,6 +66,14 @@ public class Notification {
     @Column(name = "next_retry_at")
     private LocalDateTime nextRetryAt;
 
+    /** PROCESSING 진입 시각 (스턱 복구 판별용) */
+    @Column(name = "processing_started_at")
+    private LocalDateTime processingStartedAt;
+
+    /** PROCESSING 스턱 복구 실행 횟수 (발송 실패 retryCount와 별도) */
+    @Column(name = "stuck_recovery_count", nullable = false)
+    private int stuckRecoveryCount;
+
     /**
      * PENDING 상태의 알림 생성
      */
@@ -90,6 +100,7 @@ public class Notification {
     public void startProcessing() {
         assertStatus(NotificationStatus.PENDING);
         this.status = NotificationStatus.PROCESSING;
+        recordProcessingStarted();
     }
 
     /** 재시도 발송: FAILED → PROCESSING (nextRetryAt 경과 후) */
@@ -101,6 +112,39 @@ public class Notification {
             );
         }
         this.status = NotificationStatus.PROCESSING;
+        recordProcessingStarted();
+    }
+
+    public void recordProcessingStarted() {
+        this.processingStartedAt = LocalDateTime.now();
+    }
+
+    /**
+     * PROCESSING 스턱 복구.
+     * - stuckRecoveryCount가 한도에 도달하면 DEAD
+     * - 최초 시도(retryCount=0) 중이면 PENDING으로 되돌림
+     * - 재시도 시도 중이면 FAILED + 즉시 재시도 가능 시각
+     */
+    public void recoverFromStuckProcessing(String reason) {
+        assertStatus(NotificationStatus.PROCESSING);
+        this.stuckRecoveryCount++;
+
+        if (this.stuckRecoveryCount >= MAX_STUCK_RECOVERY_COUNT) {
+            this.failureReason = reason;
+            markDead();
+            return;
+        }
+
+        this.processingStartedAt = null;
+        this.failureReason = reason;
+
+        if (this.retryCount == 0) {
+            this.status = NotificationStatus.PENDING;
+            this.nextRetryAt = null;
+        } else {
+            this.status = NotificationStatus.FAILED;
+            this.nextRetryAt = LocalDateTime.now();
+        }
     }
 
     public void markSuccess() {
@@ -108,6 +152,8 @@ public class Notification {
         this.status = NotificationStatus.SUCCESS;
         this.failureReason = null;
         this.nextRetryAt = null;
+        this.processingStartedAt = null;
+        this.stuckRecoveryCount = 0;
     }
 
     /**
@@ -125,12 +171,14 @@ public class Notification {
         } else {
             this.status = NotificationStatus.FAILED;
             this.nextRetryAt = LocalDateTime.now().plusMinutes(RETRY_DELAY_MINUTES);
+            this.processingStartedAt = null;
         }
     }
 
     public void markDead() {
         this.status = NotificationStatus.DEAD;
         this.nextRetryAt = null;
+        this.processingStartedAt = null;
     }
 
     /** FAILED이고 재시도 시각이 지났으며 아직 DEAD가 아닌 경우 */

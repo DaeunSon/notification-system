@@ -30,4 +30,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         NotificationStatus status,
         LocalDateTime now,
         int retryCount);
+
+    /** PROCESSING 스턱: status=PROCESSING 이고 processingStartedAt이 threshold 이전인 알림 */
+    List<Notification> findByStatusAndProcessingStartedAtBefore(
+            NotificationStatus status,
+            LocalDateTime threshold
+    );
 }

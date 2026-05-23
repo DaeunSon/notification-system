@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 public class NotificationDispatchScheduler {
 
     private final NotificationDispatchService notificationDispatchService;
+    private final NotificationStuckRecoveryService notificationStuckRecoveryService;
 
     @Scheduled(fixedDelay = 5000)
     public void pollPendingNotifications() {
@@ -20,5 +21,10 @@ public class NotificationDispatchScheduler {
     @Scheduled(fixedDelay = 5000)
     public void pollFailedRetryDueNotifications() {
         notificationDispatchService.dispatchFailedRetryDueNotifications();
+    }
+
+    @Scheduled(fixedDelay = 60_000)
+    public void recoverStuckProcessingNotifications() {
+        notificationStuckRecoveryService.recoverStuckProcessingNotifications();
     }
 }
