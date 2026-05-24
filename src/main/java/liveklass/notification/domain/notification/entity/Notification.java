@@ -123,7 +123,7 @@ public class Notification {
      * PROCESSING 스턱 복구.
      * - stuckRecoveryCount가 한도에 도달하면 DEAD
      * - 최초 시도(retryCount=0) 중이면 PENDING으로 되돌림
-     * - 재시도 시도 중이면 FAILED + 즉시 재시도 가능 시각
+     * - 재시도 시도 중이면 FAILED + 즉시 재시도 가능 시각으로 설정
      */
     public void recoverFromStuckProcessing(String reason) {
         assertStatus(NotificationStatus.PROCESSING);
@@ -187,6 +187,13 @@ public class Notification {
                 && this.retryCount < MAX_RETRY_COUNT
                 && this.nextRetryAt != null
                 && !this.nextRetryAt.isAfter(LocalDateTime.now());
+    }
+
+    /**
+     * 읽음 처리. 이미 읽음이면 변경 없이 멱등하게 동작한다 (다기기 동시 요청 대응).
+     */
+    public void markAsRead() {
+        this.read = true;
     }
 
     private void assertStatus(NotificationStatus expected) {

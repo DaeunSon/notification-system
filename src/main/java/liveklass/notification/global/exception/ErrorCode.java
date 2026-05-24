@@ -14,7 +14,8 @@ public enum ErrorCode {
 
     //Notification
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "알림을 찾을 수 없습니다."),
-    NOTIFICATION_DUPLICATE(HttpStatus.CONFLICT, "이미 동일한 알림 요청이 존재합니다.");
+    NOTIFICATION_DUPLICATE(HttpStatus.CONFLICT, "이미 동일한 알림 요청이 존재합니다."),
+    NOTIFICATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 알림에 대한 접근 권한이 없습니다.");
 
 
     private HttpStatus status;

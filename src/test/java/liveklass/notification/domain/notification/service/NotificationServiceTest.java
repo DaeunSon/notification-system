@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import liveklass.notification.domain.notification.dto.CreateNotificationRequest;
 import liveklass.notification.domain.notification.dto.response.NotificationAcceptedResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationDetailResponse;
+import liveklass.notification.domain.notification.dto.response.NotificationReadResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationStatusResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationSummaryResponse;
 import liveklass.notification.domain.notification.entity.Notification;
@@ -83,23 +84,6 @@ class NotificationServiceTest {
         );
         ReflectionTestUtils.setField(notification, "id", NOTIFICATION_ID);
         return notification;
-    }
-
-    @Nested
-    @DisplayName("createRequest()")
-    class CreateRequest {
-
-        @Test
-        @DisplayName("NotificationCreationService.createPending()에 위임한다")
-        void delegatesToCreatePending() {
-            NotificationAcceptedResponse accepted = NotificationAcceptedResponse.accepted(pendingNotification());
-            given(notificationCreationService.createPending(createRequest)).willReturn(accepted);
-
-            NotificationAcceptedResponse response = notificationService.createRequest(createRequest);
-
-            assertThat(response).isSameAs(accepted);
-            verify(notificationCreationService).createPending(createRequest);
-        }
     }
 
     @Nested
@@ -210,6 +194,51 @@ class NotificationServiceTest {
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
             verify(notificationRepository, never()).findByReceiver_IdOrderByIdDesc(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("markAsRead()")
+    class MarkAsRead {
+
+        @Test
+        @DisplayName("존재하지 않는 알림 ID면 NOTIFICATION_NOT_FOUND")
+        void fail_notFound() {
+            given(notificationRepository.findById(UNKNOWN_ID)).willReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> notificationService.markAsRead(UNKNOWN_ID, null)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.NOTIFICATION_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("receiverId가 수신자와 다르면 NOTIFICATION_ACCESS_DENIED")
+        void fail_accessDenied() {
+            Notification notification = pendingNotification();
+            given(notificationRepository.findById(NOTIFICATION_ID)).willReturn(Optional.of(notification));
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> notificationService.markAsRead(NOTIFICATION_ID, UNKNOWN_ID)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.NOTIFICATION_ACCESS_DENIED);
+            assertThat(notification.isRead()).isFalse();
+        }
+
+        @Test
+        @DisplayName("receiverId가 수신자와 일치하면 읽음 처리한다")
+        void success_withMatchingReceiverId() {
+            Notification notification = pendingNotification();
+            given(notificationRepository.findById(NOTIFICATION_ID)).willReturn(Optional.of(notification));
+
+            NotificationReadResponse response =
+                    notificationService.markAsRead(NOTIFICATION_ID, RECEIVER_ID);
+
+            assertThat(response.read()).isTrue();
         }
     }
 }

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import liveklass.notification.domain.notification.dto.CreateNotificationRequest;
 import liveklass.notification.domain.notification.dto.response.NotificationAcceptedResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationDetailResponse;
+import liveklass.notification.domain.notification.dto.response.NotificationReadResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationStatusResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationSummaryResponse;
 import liveklass.notification.domain.notification.service.NotificationService;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -51,5 +53,12 @@ public class NotificationController {
             @PathVariable Long receiverId,
             @RequestParam(required = false) Boolean read) {
         return ResponseEntity.ok(notificationService.getNotificationList(receiverId, read));
+    }
+
+    @PatchMapping("/{notificationId}/read")
+    public ResponseEntity<NotificationReadResponse> markAsRead(
+            @PathVariable Long notificationId,
+            @RequestParam(required = false) Long receiverId) {
+        return ResponseEntity.ok(notificationService.markAsRead(notificationId, receiverId));
     }
 }
