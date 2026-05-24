@@ -237,4 +237,24 @@ class NotificationServiceTest {
             assertThat(response.read()).isTrue();
         }
     }
+
+    @Nested
+    @DisplayName("retryDeadNotification()")
+    class RetryDeadNotification {
+
+        @Test
+        @DisplayName("DEAD가 아니면 NOTIFICATION_NOT_RETRYABLE")
+        void fail_notRetryable() {
+            Notification notification = pendingNotification();
+            given(notificationRepository.findById(NOTIFICATION_ID)).willReturn(Optional.of(notification));
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> notificationService.retryDeadNotification(NOTIFICATION_ID)
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.NOTIFICATION_NOT_RETRYABLE);
+            assertThat(notification.getStatus()).isEqualTo(NotificationStatus.PENDING);
+        }
+    }
 }
