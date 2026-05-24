@@ -4,9 +4,11 @@ import liveklass.notification.domain.notification.dto.CreateNotificationRequest;
 import liveklass.notification.domain.notification.dto.response.NotificationAcceptedResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationDetailResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationReadResponse;
+import liveklass.notification.domain.notification.dto.response.NotificationRetryResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationStatusResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationSummaryResponse;
 import liveklass.notification.domain.notification.entity.Notification;
+import liveklass.notification.domain.notification.entity.NotificationStatus;
 import liveklass.notification.domain.notification.repository.NotificationRepository;
 import liveklass.notification.domain.user.entity.User;
 import liveklass.notification.domain.user.repository.UserRepository;
@@ -79,6 +81,25 @@ public class NotificationService {
 
         notification.markAsRead();
         return NotificationReadResponse.from(notification);
+    }
+
+    /**
+     * DEAD 알림을 PENDING으로 되돌려 스케줄러 재발송 대기열에 넣는다.
+     * retryCount는 0으로 리셋한다.
+     */
+    @Transactional
+    public NotificationRetryResponse retryDeadNotification(Long notificationId) {
+        Notification notification = findNotification(notificationId);
+
+        if (notification.getStatus() != NotificationStatus.DEAD) {
+            throw new BusinessException(
+                    ErrorCode.NOTIFICATION_NOT_RETRYABLE,
+                    "알림 ID: " + notificationId + ", 현재 상태: " + notification.getStatus()
+            );
+        }
+
+        notification.requeueForManualRetry();
+        return NotificationRetryResponse.from(notification);
     }
 
     private Notification findNotification(Long notificationId) {

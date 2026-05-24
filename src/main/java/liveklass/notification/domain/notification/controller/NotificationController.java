@@ -5,6 +5,7 @@ import liveklass.notification.domain.notification.dto.CreateNotificationRequest;
 import liveklass.notification.domain.notification.dto.response.NotificationAcceptedResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationDetailResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationReadResponse;
+import liveklass.notification.domain.notification.dto.response.NotificationRetryResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationStatusResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationSummaryResponse;
 import liveklass.notification.domain.notification.service.NotificationService;
@@ -60,5 +61,11 @@ public class NotificationController {
             @PathVariable Long notificationId,
             @RequestParam(required = false) Long receiverId) {
         return ResponseEntity.ok(notificationService.markAsRead(notificationId, receiverId));
+    }
+
+    @PostMapping("/{notificationId}/retry")
+    public ResponseEntity<NotificationRetryResponse> retryDeadNotification(
+            @PathVariable Long notificationId) {
+        return ResponseEntity.ok(notificationService.retryDeadNotification(notificationId));
     }
 }

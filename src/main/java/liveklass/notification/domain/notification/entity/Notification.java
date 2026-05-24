@@ -194,6 +194,19 @@ public class Notification {
         this.processingStartedAt = null;
     }
 
+    /**
+     * DEAD 알림을 수동 재시도 대기(PENDING)로 되돌린다. retryCount는 0으로 리셋한다.
+     */
+    public void requeueForManualRetry() {
+        assertStatus(NotificationStatus.DEAD);
+        this.status = NotificationStatus.PENDING;
+        this.retryCount = 0;
+        this.failureReason = null;
+        this.nextRetryAt = null;
+        this.processingStartedAt = null;
+        this.stuckRecoveryCount = 0;
+    }
+
     /** FAILED이고 재시도 시각이 지났으며 아직 DEAD가 아닌 경우 */
     public boolean isRetryDue() {
         return this.status == NotificationStatus.FAILED
