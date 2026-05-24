@@ -8,10 +8,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import liveklass.notification.domain.notification.entity.Notification;
-import liveklass.notification.domain.notification.entity.NotificationChannel;
 import liveklass.notification.domain.notification.entity.NotificationStatus;
-import liveklass.notification.domain.notification.entity.NotificationType;
 import liveklass.notification.domain.notification.repository.NotificationRepository;
+import liveklass.notification.domain.notification.support.NotificationTestFixtures;
 import liveklass.notification.domain.user.entity.User;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,12 +42,7 @@ class NotificationStuckRecoveryServiceTest {
     @BeforeEach
     void setUp() {
         User receiver = mock(User.class);
-        notification = Notification.createPending(
-                receiver,
-                NotificationType.ENROLLMENT_CONFIRMED,
-                "course-1",
-                NotificationChannel.EMAIL
-        );
+        notification = NotificationTestFixtures.pending(receiver);
         ReflectionTestUtils.setField(notification, "id", 1L);
     }
 

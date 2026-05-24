@@ -12,7 +12,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-
+/**
+ * DB 잠금
+ */
 @Repository
 public class NotificationDispatchClaimRepositoryImpl implements NotificationDispatchClaimRepository {
 
@@ -20,14 +22,18 @@ public class NotificationDispatchClaimRepositoryImpl implements NotificationDisp
     private EntityManager entityManager;
 
     @Override
-    public Optional<Notification> findAndLockNextPending() {
+    public Optional<Notification> findAndLockNextPending(LocalDateTime now) {
         return findAndLockOne(
                 """
                         SELECT n FROM Notification n
                         WHERE n.status = :status
+                          AND (n.scheduledAt IS NULL OR n.scheduledAt <= :now)
                         ORDER BY n.id ASC
                         """,
-                query -> query.setParameter("status", NotificationStatus.PENDING)
+                query -> {
+                    query.setParameter("status", NotificationStatus.PENDING);
+                    query.setParameter("now", now);
+                }
         );
     }
 

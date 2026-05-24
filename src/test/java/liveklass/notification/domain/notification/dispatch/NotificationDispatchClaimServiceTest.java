@@ -7,11 +7,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import liveklass.notification.domain.notification.entity.Notification;
-import liveklass.notification.domain.notification.entity.NotificationChannel;
 import liveklass.notification.domain.notification.entity.NotificationStatus;
-import liveklass.notification.domain.notification.entity.NotificationType;
 import liveklass.notification.domain.notification.repository.NotificationDispatchClaimRepository;
 import liveklass.notification.domain.notification.repository.NotificationRepository;
+import liveklass.notification.domain.notification.support.NotificationTestFixtures;
 import liveklass.notification.domain.user.entity.User;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -43,19 +42,14 @@ class NotificationDispatchClaimServiceTest {
     @BeforeEach
     void setUp() {
         User receiver = org.mockito.Mockito.mock(User.class);
-        pendingNotification = Notification.createPending(
-                receiver,
-                NotificationType.ENROLLMENT_CONFIRMED,
-                "course-1",
-                NotificationChannel.EMAIL
-        );
+        pendingNotification = NotificationTestFixtures.pending(receiver);
         ReflectionTestUtils.setField(pendingNotification, "id", 1L);
     }
 
     @Test
     @DisplayName("PENDING 1건 선점 후 PROCESSING으로 저장한다")
     void claimNextPending() {
-        given(notificationDispatchClaimRepository.findAndLockNextPending())
+        given(notificationDispatchClaimRepository.findAndLockNextPending(ArgumentMatchers.any(LocalDateTime.class)))
                 .willReturn(Optional.of(pendingNotification));
         when(notificationRepository.save(ArgumentMatchers.any(Notification.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));

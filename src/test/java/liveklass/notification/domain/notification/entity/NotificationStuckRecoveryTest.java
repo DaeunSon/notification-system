@@ -3,6 +3,7 @@ package liveklass.notification.domain.notification.entity;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDateTime;
+import liveklass.notification.domain.notification.support.NotificationTestFixtures;
 import liveklass.notification.domain.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -18,12 +19,7 @@ class NotificationStuckRecoveryTest {
     @BeforeEach
     void setUp() {
         User receiver = Mockito.mock(User.class);
-        notification = Notification.createPending(
-                receiver,
-                NotificationType.ENROLLMENT_CONFIRMED,
-                "course-1",
-                NotificationChannel.EMAIL
-        );
+        notification = NotificationTestFixtures.pending(receiver);
         notification.startProcessing();
     }
 

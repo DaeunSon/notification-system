@@ -1,13 +1,14 @@
 package liveklass.notification.domain.notification.sender;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import liveklass.notification.domain.notification.entity.Notification;
-import liveklass.notification.domain.notification.entity.NotificationChannel;
-import liveklass.notification.domain.notification.entity.NotificationType;
+import liveklass.notification.domain.notification.support.NotificationTestFixtures;
 import liveklass.notification.domain.user.entity.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,9 +16,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @DisplayName("LoggingNotificationSender 테스트")
 class LoggingNotificationSenderTest {
@@ -51,12 +49,7 @@ class LoggingNotificationSenderTest {
         User receiver = mock(User.class);
         when(receiver.getId()).thenReturn(RECEIVER_ID);
 
-        Notification notification = Notification.createPending(
-                receiver,
-                NotificationType.ENROLLMENT_CONFIRMED,
-                "course-1",
-                NotificationChannel.EMAIL
-        );
+        Notification notification = NotificationTestFixtures.pending(receiver);
         ReflectionTestUtils.setField(notification, "id", NOTIFICATION_ID);
 
         sender.send(notification);
@@ -70,7 +63,7 @@ class LoggingNotificationSenderTest {
                 .contains("channel=EMAIL")
                 .contains("notificationId=10")
                 .contains("receiverId=1")
-                .contains("title=수강 신청 확정")
-                .contains("content=");
+                .contains("title=title")
+                .contains("content=content");
     }
 }

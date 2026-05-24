@@ -40,7 +40,8 @@ public class NotificationCreationService {
                 request.referenceId(),
                 request.channel(),
                 message.title(),
-                message.content()
+                message.content(),
+                request.scheduledAt()
         );
 
         validateNotDuplicated(notification);
