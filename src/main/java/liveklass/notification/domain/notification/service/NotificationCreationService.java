@@ -1,9 +1,11 @@
 package liveklass.notification.domain.notification.service;
 
 import liveklass.notification.domain.notification.dto.CreateNotificationRequest;
+import liveklass.notification.domain.notification.dto.RenderedNotificationMessage;
 import liveklass.notification.domain.notification.dto.response.NotificationAcceptedResponse;
 import liveklass.notification.domain.notification.entity.Notification;
 import liveklass.notification.domain.notification.repository.NotificationRepository;
+import liveklass.notification.domain.notification.template.NotificationMessageFactory;
 import liveklass.notification.domain.user.entity.User;
 import liveklass.notification.domain.user.repository.UserRepository;
 import liveklass.notification.global.exception.BusinessException;
@@ -20,16 +22,25 @@ public class NotificationCreationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final NotificationMessageFactory notificationMessageFactory;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public NotificationAcceptedResponse createPending(CreateNotificationRequest request) {
         User receiver = findReceiver(request.receiverId());
 
+        RenderedNotificationMessage message = notificationMessageFactory.render(
+                request.notificationType(),
+                request.channel(),
+                request.referenceId()
+        );
+
         Notification notification = Notification.createPending(
                 receiver,
                 request.notificationType(),
                 request.referenceId(),
-                request.channel()
+                request.channel(),
+                message.title(),
+                message.content()
         );
 
         validateNotDuplicated(notification);

@@ -11,11 +11,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import liveklass.notification.domain.notification.dto.CreateNotificationRequest;
+import liveklass.notification.domain.notification.dto.RenderedNotificationMessage;
 import liveklass.notification.domain.notification.dto.response.NotificationAcceptedResponse;
 import liveklass.notification.domain.notification.entity.Notification;
 import liveklass.notification.domain.notification.entity.NotificationChannel;
 import liveklass.notification.domain.notification.entity.NotificationType;
 import liveklass.notification.domain.notification.repository.NotificationRepository;
+import liveklass.notification.domain.notification.template.NotificationMessageFactory;
 import liveklass.notification.domain.user.entity.User;
 import liveklass.notification.domain.user.repository.UserRepository;
 import liveklass.notification.global.exception.BusinessException;
@@ -47,6 +49,9 @@ class NotificationCreationServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private NotificationMessageFactory notificationMessageFactory;
+
     @InjectMocks
     private NotificationCreationService notificationCreationService;
 
@@ -65,6 +70,9 @@ class NotificationCreationServiceTest {
                 "course-1",
                 NotificationChannel.EMAIL
         );
+
+        lenient().when(notificationMessageFactory.render(any(), any(), any()))
+                .thenReturn(new RenderedNotificationMessage("title", "content"));
     }
 
     @Nested
