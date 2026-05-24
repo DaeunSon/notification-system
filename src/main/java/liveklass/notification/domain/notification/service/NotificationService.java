@@ -3,6 +3,7 @@ package liveklass.notification.domain.notification.service;
 import liveklass.notification.domain.notification.dto.CreateNotificationRequest;
 import liveklass.notification.domain.notification.dto.response.NotificationAcceptedResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationDetailResponse;
+import liveklass.notification.domain.notification.dto.response.NotificationReadResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationStatusResponse;
 import liveklass.notification.domain.notification.dto.response.NotificationSummaryResponse;
 import liveklass.notification.domain.notification.entity.Notification;
@@ -61,6 +62,23 @@ public class NotificationService {
         return notifications.stream()
                 .map(NotificationSummaryResponse::from)
                 .toList();
+    }
+
+    /**
+     * 알림 읽음 처리. 이미 읽음이면 멱등하게 200을 반환한다.
+     * @param receiverId 지정 시 수신자 일치 여부 검증
+     */
+    @Transactional
+    public NotificationReadResponse markAsRead(Long notificationId, Long receiverId) {
+        Notification notification = findNotification(notificationId);
+
+        if (receiverId != null && !notification.getReceiver().getId().equals(receiverId)) {
+            throw new BusinessException(ErrorCode.NOTIFICATION_ACCESS_DENIED,
+                    "수신자 ID: " + receiverId + ", 알림 ID: " + notificationId);
+        }
+
+        notification.markAsRead();
+        return NotificationReadResponse.from(notification);
     }
 
     private Notification findNotification(Long notificationId) {
