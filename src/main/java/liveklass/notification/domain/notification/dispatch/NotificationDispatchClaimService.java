@@ -22,9 +22,10 @@ public class NotificationDispatchClaimService {
     private final NotificationDispatchClaimRepository notificationDispatchClaimRepository;
     private final NotificationRepository notificationRepository;
 
+    //선점 TX를 발송 TX와 분리
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Optional<Notification> claimNextPending() {
-        return notificationDispatchClaimRepository.findAndLockNextPending()
+        return notificationDispatchClaimRepository.findAndLockNextPending(LocalDateTime.now())
                 .map(notification -> {
                     notification.startProcessing();
                     return notificationRepository.save(notification);

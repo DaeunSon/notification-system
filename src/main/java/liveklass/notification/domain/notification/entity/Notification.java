@@ -74,6 +74,10 @@ public class Notification {
     @Column(name = "stuck_recovery_count", nullable = false)
     private int stuckRecoveryCount;
 
+    /** 발송 예약 시각. null이면 즉시 발송 대상 */
+    @Column(name = "scheduled_at")
+    private LocalDateTime scheduledAt;
+
     /**
      * PENDING 상태의 알림 생성
      */
@@ -81,25 +85,10 @@ public class Notification {
             User receiver,
             NotificationType notificationType,
             String referenceId,
-            NotificationChannel channel
-    ) {
-        return createPending(
-                receiver,
-                notificationType,
-                referenceId,
-                channel,
-                notificationType.getTitle(),
-                notificationType.formatContent(referenceId)
-        );
-    }
-
-    public static Notification createPending(
-            User receiver,
-            NotificationType notificationType,
-            String referenceId,
             NotificationChannel channel,
             String title,
-            String content
+            String content,
+            LocalDateTime scheduledAt
     ) {
         Notification notification = new Notification();
         notification.receiver = receiver;
@@ -108,10 +97,16 @@ public class Notification {
         notification.channel = channel;
         notification.title = title;
         notification.content = content;
+        notification.scheduledAt = scheduledAt;
         notification.status = NotificationStatus.PENDING;
         notification.read = false;
         notification.retryCount = 0;
         return notification;
+    }
+
+    /** 예약 시각이 없거나 이미 도래한 경우 발송 대상 */
+    public boolean isDispatchDue(LocalDateTime now) {
+        return this.scheduledAt == null || !this.scheduledAt.isAfter(now);
     }
 
     /** 최초 발송: PENDING → PROCESSING */

@@ -11,7 +11,9 @@ import java.util.Optional;
  */
 public interface NotificationDispatchClaimRepository {
 
-    Optional<Notification> findAndLockNextPending();
+    //PENDING 중 발송 시각이 도래한 가장 작은 id 1건 + 잠금
+    Optional<Notification> findAndLockNextPending(LocalDateTime now);
 
+    //재시도 시각 지난 FAILED 1건 + 잠금
     Optional<Notification> findAndLockNextFailedRetryDue(LocalDateTime now, int maxRetryCount);
 }

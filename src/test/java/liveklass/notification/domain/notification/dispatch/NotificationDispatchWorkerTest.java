@@ -11,11 +11,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import liveklass.notification.domain.notification.entity.Notification;
-import liveklass.notification.domain.notification.entity.NotificationChannel;
 import liveklass.notification.domain.notification.entity.NotificationStatus;
-import liveklass.notification.domain.notification.entity.NotificationType;
 import liveklass.notification.domain.notification.repository.NotificationRepository;
 import liveklass.notification.domain.notification.sender.NotificationSender;
+import liveklass.notification.domain.notification.support.NotificationTestFixtures;
 import liveklass.notification.domain.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -53,12 +52,7 @@ class NotificationDispatchWorkerTest {
         User receiver = mock(User.class);
         lenient().when(receiver.getId()).thenReturn(RECEIVER_ID);
 
-        pendingNotification = Notification.createPending(
-                receiver,
-                NotificationType.ENROLLMENT_CONFIRMED,
-                "course-1",
-                NotificationChannel.EMAIL
-        );
+        pendingNotification = NotificationTestFixtures.pending(receiver);
         ReflectionTestUtils.setField(pendingNotification, "id", NOTIFICATION_ID);
 
         lenient().when(notificationRepository.save(any(Notification.class)))

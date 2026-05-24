@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.time.LocalDateTime;
+
 /**
  * 비즈니스 TX 커밋 후 알림 PENDING을 생성한다.
  * IN_APP은 생성 직후 dispatch를 비동기 트리거하고, EMAIL은 스케줄러에 맡긴다.
@@ -22,10 +24,15 @@ public class NotificationRequestedEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onNotificationRequested(NotificationRequestedEvent event) {
-        notificationCreationService.createPending(event.request());
+        var request = event.request();
+        notificationCreationService.createPending(request);
 
-        if (event.request().channel() == NotificationChannel.IN_APP) {
+        if (request.channel() == NotificationChannel.IN_APP && isDispatchDue(request.scheduledAt())) {
             notificationDispatchTrigger.triggerPendingDispatch();
         }
+    }
+
+    private boolean isDispatchDue(LocalDateTime scheduledAt) {
+        return scheduledAt == null || !scheduledAt.isAfter(LocalDateTime.now());
     }
 }

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import liveklass.notification.domain.notification.entity.NotificationChannel;
 import liveklass.notification.domain.notification.entity.NotificationType;
 
+import java.time.LocalDateTime;
+
 public record CreateNotificationRequest(
 
         @NotNull
@@ -17,6 +19,16 @@ public record CreateNotificationRequest(
         String referenceId,
 
         @NotNull
-        NotificationChannel channel
+        NotificationChannel channel,
+
+        LocalDateTime scheduledAt
 ) {
+    public CreateNotificationRequest(
+            Long receiverId,
+            NotificationType notificationType,
+            String referenceId,
+            NotificationChannel channel
+    ) {
+        this(receiverId, notificationType, referenceId, channel, null);
+    }
 }

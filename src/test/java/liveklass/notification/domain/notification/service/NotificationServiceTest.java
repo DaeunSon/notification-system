@@ -19,6 +19,7 @@ import liveklass.notification.domain.notification.entity.Notification;
 import liveklass.notification.domain.notification.entity.NotificationChannel;
 import liveklass.notification.domain.notification.entity.NotificationStatus;
 import liveklass.notification.domain.notification.entity.NotificationType;
+import liveklass.notification.domain.notification.support.NotificationTestFixtures;
 import liveklass.notification.domain.notification.repository.NotificationRepository;
 import liveklass.notification.domain.user.entity.User;
 import liveklass.notification.domain.user.repository.UserRepository;
@@ -76,12 +77,7 @@ class NotificationServiceTest {
     }
 
     private Notification pendingNotification() {
-        Notification notification = Notification.createPending(
-                receiver,
-                NotificationType.ENROLLMENT_CONFIRMED,
-                "course-1",
-                NotificationChannel.EMAIL
-        );
+        Notification notification = NotificationTestFixtures.pending(receiver);
         ReflectionTestUtils.setField(notification, "id", NOTIFICATION_ID);
         return notification;
     }
