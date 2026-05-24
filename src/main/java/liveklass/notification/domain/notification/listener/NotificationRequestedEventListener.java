@@ -1,5 +1,7 @@
 package liveklass.notification.domain.notification.listener;
 
+import liveklass.notification.domain.notification.dispatch.NotificationDispatchTrigger;
+import liveklass.notification.domain.notification.entity.NotificationChannel;
 import liveklass.notification.domain.notification.event.NotificationRequestedEvent;
 import liveklass.notification.domain.notification.service.NotificationCreationService;
 import lombok.RequiredArgsConstructor;
@@ -9,17 +11,21 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
  * 비즈니스 TX 커밋 후 알림 PENDING을 생성한다.
- * 수강 거절·취소도 비즈니스 결과로 커밋되므로 AFTER_COMMIT 하나로 처리한다.
- * 시스템 오류(DB 등)로 인한 롤백은 알림 생성 대상이 아니다.
+ * IN_APP은 생성 직후 dispatch를 비동기 트리거하고, EMAIL은 스케줄러에 맡긴다.
  */
 @Component
 @RequiredArgsConstructor
 public class NotificationRequestedEventListener {
 
     private final NotificationCreationService notificationCreationService;
+    private final NotificationDispatchTrigger notificationDispatchTrigger;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onNotificationRequested(NotificationRequestedEvent event) {
         notificationCreationService.createPending(event.request());
+
+        if (event.request().channel() == NotificationChannel.IN_APP) {
+            notificationDispatchTrigger.triggerPendingDispatch();
+        }
     }
 }
