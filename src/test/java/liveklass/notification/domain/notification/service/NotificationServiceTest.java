@@ -7,7 +7,6 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import liveklass.notification.domain.notification.dto.CreateNotificationRequest;
@@ -32,7 +31,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
@@ -46,6 +44,9 @@ class NotificationServiceTest {
     private static final Long RECEIVER_ID = 1L;
     private static final Long NOTIFICATION_ID = 10L;
     private static final Long UNKNOWN_ID = 99L;
+
+    @Mock
+    private NotificationCreationService notificationCreationService;
 
     @Mock
     private NotificationRepository notificationRepository;
@@ -89,108 +90,15 @@ class NotificationServiceTest {
     class CreateRequest {
 
         @Test
-        @DisplayName("알림 생성 성공")
-        void success() {
-            given(notificationRepository.existsByReceiver_IdAndNotificationTypeAndReferenceIdAndChannel(
-                    RECEIVER_ID,
-                    createRequest.notificationType(),
-                    createRequest.referenceId(),
-                    createRequest.channel()
-            )).willReturn(false);
-            given(notificationRepository.save(any(Notification.class)))
-                    .willAnswer(invocation -> {
-                        Notification saved = invocation.getArgument(0);
-                        ReflectionTestUtils.setField(saved, "id", NOTIFICATION_ID);
-                        return saved;
-                    });
+        @DisplayName("NotificationCreationService.createPending()에 위임한다")
+        void delegatesToCreatePending() {
+            NotificationAcceptedResponse accepted = NotificationAcceptedResponse.accepted(pendingNotification());
+            given(notificationCreationService.createPending(createRequest)).willReturn(accepted);
 
             NotificationAcceptedResponse response = notificationService.createRequest(createRequest);
 
-            assertThat(response.notificationId()).isEqualTo(NOTIFICATION_ID);
-            assertThat(response.message()).contains("접수");
-            verify(notificationRepository).save(any(Notification.class));
-        }
-
-        @Test
-        @DisplayName("존재하지 않는 수신자 ID로 요청 시 예외 발생")
-        void fail_userNotFound() {
-            CreateNotificationRequest unknownReceiverRequest = new CreateNotificationRequest(
-                    UNKNOWN_ID,
-                    NotificationType.ENROLLMENT_CONFIRMED,
-                    "course-1",
-                    NotificationChannel.EMAIL
-            );
-            given(userRepository.findById(UNKNOWN_ID)).willReturn(Optional.empty());
-
-            BusinessException exception = assertThrows(
-                    BusinessException.class,
-                    () -> notificationService.createRequest(unknownReceiverRequest)
-            );
-
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.USER_NOT_FOUND);
-            verify(notificationRepository, never()).save(any());
-        }
-
-        @Test
-        @DisplayName("순차적 중복 요청 시 NOTIFICATION_DUPLICATE(409) 발생")
-        void fail_sequentialDuplicateRequest() {
-            given(notificationRepository.existsByReceiver_IdAndNotificationTypeAndReferenceIdAndChannel(
-                    RECEIVER_ID,
-                    createRequest.notificationType(),
-                    createRequest.referenceId(),
-                    createRequest.channel()
-            )).willReturn(false, true);
-            given(notificationRepository.save(any(Notification.class)))
-                    .willAnswer(invocation -> {
-                        Notification saved = invocation.getArgument(0);
-                        ReflectionTestUtils.setField(saved, "id", NOTIFICATION_ID);
-                        return saved;
-                    });
-
-            NotificationAcceptedResponse firstResponse = notificationService.createRequest(createRequest);
-            assertThat(firstResponse.notificationId()).isEqualTo(NOTIFICATION_ID);
-
-            BusinessException exception = assertThrows(
-                    BusinessException.class,
-                    () -> notificationService.createRequest(createRequest)
-            );
-
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.NOTIFICATION_DUPLICATE);
-            verify(notificationRepository, times(1)).save(any(Notification.class));
-            verify(notificationRepository, times(2)).existsByReceiver_IdAndNotificationTypeAndReferenceIdAndChannel(
-                    RECEIVER_ID,
-                    createRequest.notificationType(),
-                    createRequest.referenceId(),
-                    createRequest.channel()
-            );
-        }
-
-        @Test
-        @DisplayName("동시 중복 요청 시 save UK 위반으로 NOTIFICATION_DUPLICATE(409) 발생")
-        void fail_concurrentDuplicateOnSave() {
-            given(notificationRepository.existsByReceiver_IdAndNotificationTypeAndReferenceIdAndChannel(
-                    RECEIVER_ID,
-                    createRequest.notificationType(),
-                    createRequest.referenceId(),
-                    createRequest.channel()
-            )).willReturn(false);
-
-            DataIntegrityViolationException ukViolation = new DataIntegrityViolationException(
-                    "uk violation",
-                    new RuntimeException(
-                            "Duplicate entry for key 'uk_notification_recipient_type_reference_channel'"
-                    )
-            );
-            given(notificationRepository.save(any(Notification.class))).willThrow(ukViolation);
-
-            BusinessException exception = assertThrows(
-                    BusinessException.class,
-                    () -> notificationService.createRequest(createRequest)
-            );
-
-            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.NOTIFICATION_DUPLICATE);
-            assertThat(exception.getDetail()).contains("수신자 ID: " + RECEIVER_ID);
-            verify(notificationRepository).save(any(Notification.class));
+            assertThat(response).isSameAs(accepted);
+            verify(notificationCreationService).createPending(createRequest);
         }
     }
 
