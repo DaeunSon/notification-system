@@ -83,13 +83,31 @@ public class Notification {
             String referenceId,
             NotificationChannel channel
     ) {
+        return createPending(
+                receiver,
+                notificationType,
+                referenceId,
+                channel,
+                notificationType.getTitle(),
+                notificationType.formatContent(referenceId)
+        );
+    }
+
+    public static Notification createPending(
+            User receiver,
+            NotificationType notificationType,
+            String referenceId,
+            NotificationChannel channel,
+            String title,
+            String content
+    ) {
         Notification notification = new Notification();
         notification.receiver = receiver;
         notification.notificationType = notificationType;
         notification.referenceId = referenceId;
         notification.channel = channel;
-        notification.title = notificationType.getTitle();
-        notification.content = notificationType.formatContent(referenceId);
+        notification.title = title;
+        notification.content = content;
         notification.status = NotificationStatus.PENDING;
         notification.read = false;
         notification.retryCount = 0;
